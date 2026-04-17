@@ -1,136 +1,144 @@
 import streamlit as st
-
-st.set_page_config(page_title="法律情境分析系統", page_icon="⚖️")
-
-# =========================
-# 📚 法律資料庫（可擴充）
-# =========================
-laws = [
-    {
-        "name": "詐欺罪",
-        "law": "刑法第339條",
-        "category": "刑事",
-        "keywords": ["騙", "詐騙", "投資", "匯款"],
-        "element": "以詐術使人交付財物",
-        "penalty": "5年以下有期徒刑、拘役或罰金"
-    },
-    {
-        "name": "竊盜罪",
-        "law": "刑法第320條",
-        "category": "刑事",
-        "keywords": ["偷", "竊"],
-        "element": "竊取他人財物",
-        "penalty": "5年以下有期徒刑"
-    },
-    {
-        "name": "公然侮辱",
-        "law": "刑法第309條",
-        "category": "刑事",
-        "keywords": ["罵", "羞辱"],
-        "element": "公開侮辱他人",
-        "penalty": "拘役或罰金"
-    },
-    {
-        "name": "誹謗罪",
-        "law": "刑法第310條",
-        "category": "刑事",
-        "keywords": ["造謠", "抹黑"],
-        "element": "散布不實言論",
-        "penalty": "2年以下有期徒刑"
-    },
-    {
-        "name": "傷害罪",
-        "law": "刑法第277條",
-        "category": "刑事",
-        "keywords": ["打", "受傷"],
-        "element": "對他人身體造成傷害",
-        "penalty": "3年以下有期徒刑"
-    },
-    {
-        "name": "加班費",
-        "law": "勞動基準法第24條",
-        "category": "行政",
-        "keywords": ["加班", "沒給錢"],
-        "element": "加班應給付加班費",
-        "penalty": "罰鍰2萬～100萬元"
-    },
-    {
-        "name": "工時",
-        "law": "勞動基準法第30條",
-        "category": "行政",
-        "keywords": ["超時工作"],
-        "element": "每日工時不得超過8小時",
-        "penalty": "罰鍰"
-    },
-    {
-        "name": "個資法",
-        "law": "個人資料保護法",
-        "category": "行政",
-        "keywords": ["偷拍", "未經同意拍照"],
-        "element": "未經同意蒐集個資",
-        "penalty": "罰鍰或刑責"
-    },
-    {
-        "name": "侵權行為",
-        "law": "民法",
-        "category": "民事",
-        "keywords": ["損害", "賠償"],
-        "element": "侵害他人權利應負損害賠償",
-        "penalty": "民事賠償"
-    }
-]
+import google.generativeai as genai
+from dotenv import load_dotenv
+import os
 
 # =========================
-# 🔍 分析引擎（加權判斷）
+# 🔑 載入 API KEY
 # =========================
-def analyze_case(text):
-    results = []
+load_dotenv()
+API_KEY = os.getenv("GOOGLE_API_KEY")
 
-    for law in laws:
-        score = 0
+if not API_KEY:
+    st.error("❌ 請設定 GOOGLE_API_KEY")
+    st.stop()
 
-        for keyword in law["keywords"]:
-            if keyword in text:
-                score += 1
-
-        if score > 0:
-            law_copy = law.copy()
-            law_copy["score"] = score
-            results.append(law_copy)
-
-    # 依關聯度排序
-    results.sort(key=lambda x: x["score"], reverse=True)
-
-    return results
-
+genai.configure(api_key=API_KEY)
 
 # =========================
-# 🎨 UI 介面
+# 🤖 模型自動選擇（防404）
 # =========================
-st.title("⚖️ 法律情境分析系統")
-st.write("輸入一段情境，系統將自動分析涉及的法條與責任")
+def get_model():
+    model_names = ["gemini-3-flash-preview"]
+    
+    for name in model_names:
+        try:
+            model = genai.GenerativeModel(name)
+            return model
+        except:
+            continue
+    
+    st.error("❌ 無可用模型")
+    st.stop()
 
-text = st.text_area("📌 請輸入情境描述：")
+# =========================
+# 🧠 Gemini 法律分析
+# =========================
+def analyze_with_ai(text):
+    model = get_model()
+
+    prompt = f"""
+你是一位台灣法律專家，請分析以下案件：
+
+【案件內容】
+{text}
+
+請務必用以下格式回答：
+
+【可能涉及罪名】
+- （列出所有可能罪名）
+
+【法律依據】
+- （列出法條，例如刑法第幾條）
+
+【構成要件分析】
+- （逐點說明為何成立）
+
+【可能法律責任】
+- （刑責或民事責任）
+"""
+
+    response = model.generate_content(prompt)
+    return response.text
+
+# =========================
+# 🗂️ 初始化 session
+# =========================
+if "conversations" not in st.session_state:
+    st.session_state.conversations = {}
+
+if "topic_ids" not in st.session_state:
+    st.session_state.topic_ids = []
+
+if "current_topic" not in st.session_state:
+    st.session_state.current_topic = "new"
+
+# =========================
+# 🎨 UI 主畫面
+# =========================
+st.set_page_config(page_title="法律AI分析系統", page_icon="⚖️")
+
+st.title("⚖️ 法律情境分析系統（Gemini AI）")
+st.write("輸入情境，AI將自動分析涉及的法條與責任")
+
+# =========================
+# ✏️ 使用者輸入
+# =========================
+user_input = st.text_area("📌 請輸入案件情境", height=150)
 
 if st.button("🔍 開始分析"):
 
-    if text.strip() == "":
-        st.warning("請先輸入情境")
+    if user_input.strip() == "":
+        st.warning("請輸入內容")
     else:
-        results = analyze_case(text)
+        with st.spinner("AI分析中..."):
+            try:
+                result = analyze_with_ai(user_input)
 
-        if not results:
-            st.error("⚠️ 無法判斷相關法條（請嘗試不同描述）")
-        else:
-            st.success("分析完成！")
+                # 存成新對話
+                topic_id = len(st.session_state.topic_ids)
+                st.session_state.topic_ids.append(topic_id)
 
-            for i, r in enumerate(results, 1):
-                st.markdown(f"---")
-                st.subheader(f"📚 分析結果 {i}")
+                st.session_state.conversations[topic_id] = {
+                    "title": user_input[:10],
+                    "content": result
+                }
 
-                st.write(f"📌 法條名稱：{r['name']}")
-                st.write(f"📖 條文依據：{r['law']}")
-                st.write(f"📂 類型：{r['category']}")
-                st.write(f"🧠 構成要件：{r['element']}")
-                st.write(f"⚖️ 處罰：{r['penalty']}")
-                st.write(f"📊 關聯程度：{r['score']}")
+                st.session_state.current_topic = topic_id
+
+            except Exception as e:
+                st.error(f"❌ 錯誤：{e}")
+
+# =========================
+# 📄 顯示結果
+# =========================
+if st.session_state.current_topic != "new":
+    data = st.session_state.conversations[st.session_state.current_topic]
+
+    st.markdown("---")
+    st.subheader(f"📂 案件：{data['title']}")
+    st.write(data["content"])
+
+# =========================
+# 📚 側邊欄
+# =========================
+with st.sidebar:
+    st.header("🗂️ 案件紀錄")
+
+    if st.button("🆕 新案件"):
+        st.session_state.current_topic = "new"
+
+    for tid in st.session_state.topic_ids:
+        title = st.session_state.conversations[tid]["title"]
+
+        label = f"✔️ {title}" if tid == st.session_state.current_topic else title
+
+        if st.button(label, key=f"topic_{tid}"):
+            st.session_state.current_topic = tid
+
+    st.markdown("---")
+
+    if st.button("🧹 清除紀錄"):
+        st.session_state.conversations = {}
+        st.session_state.topic_ids = []
+        st.session_state.current_topic = "new"
