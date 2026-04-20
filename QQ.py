@@ -85,9 +85,6 @@ def analyze_with_ai(text):
     response = model.generate_content(prompt)
     return response.text
 
-    response = model.generate_content(prompt)
-    return response.text
-
 # =========================
 # 🗂️ 初始化 session
 # =========================
