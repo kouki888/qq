@@ -19,7 +19,7 @@ genai.configure(api_key=API_KEY)
 # 🤖 模型自動選擇（防404）
 # =========================
 def get_model():
-    model_names = ["gemini-3-flash-preview"]
+    model_names = ["gemini-2.5-flash"]
     
     for name in model_names:
         try:
