@@ -1,38 +1,47 @@
 import streamlit as st
 import google.generativeai as genai
-from dotenv import load_dotenv
-import os
 
 # =========================
-# 🔑 載入 API KEY
+# 🎨 基本設定
 # =========================
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
+st.set_page_config(page_title="法律AI分析系統", page_icon="⚖️", layout="wide")
 
-if not API_KEY:
-    st.error("❌ 請設定 GOOGLE_API_KEY")
-    st.stop()
-
-genai.configure(api_key=API_KEY)
+st.title("⚖️ 法律AI分析系統（專題完整版）")
+st.write("輸入案件情境，由AI進行法律分析、多角色攻防與模擬判決")
 
 # =========================
-# 🤖 模型自動選擇（防404）
+# 🔑 Sidebar API Key
+# =========================
+with st.sidebar:
+    st.header("🔑 系統設定")
+
+    API_KEY = st.text_input("輸入 Google API Key", type="password")
+
+    if API_KEY:
+        genai.configure(api_key=API_KEY)
+    else:
+        st.warning("⚠️ 請輸入 API Key 才能使用 AI")
+
+    st.markdown("---")
+
+    st.header("🗂️ 功能選單")
+
+    if st.button("🆕 新案件"):
+        st.session_state.current_topic = "new"
+
+    if st.button("🧹 清除紀錄"):
+        st.session_state.conversations = {}
+        st.session_state.topic_ids = []
+        st.session_state.current_topic = "new"
+
+# =========================
+# 🧠 模型
 # =========================
 def get_model():
-    model_names = ["gemini-3-flash-preview"]
-    
-    for name in model_names:
-        try:
-            model = genai.GenerativeModel(name)
-            return model
-        except:
-            continue
-    
-    st.error("❌ 無可用模型")
-    st.stop()
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 # =========================
-# 🧠 Gemini 法律分析
+# ⚖️ AI分析核心
 # =========================
 def analyze_with_ai(text):
     model = get_model()
@@ -43,37 +52,23 @@ def analyze_with_ai(text):
 【案件內容】
 {text}
 
-請分成兩個部分輸出：
+請分成兩大部分：
 
 ========================
 【第一部分：基本法律分析】
 ========================
 【可能涉及罪名】
-- 
-
 【法律依據】
-- 
-
 【構成要件分析】
-- 
-
 【可能法律責任】
-- 
 
 ========================
 【第二部分：進階分析】
 ========================
 【檢察官觀點】
--
-
 【辯護律師觀點】
--
-
 【法官觀點】
--
-
 【消費者觀點】
--
 
 【模擬判決結果】
 （請用法院判決書格式：主文 / 理由 / 結果）
@@ -86,7 +81,7 @@ def analyze_with_ai(text):
     return response.text
 
 # =========================
-# 🗂️ 初始化 session
+# 🗂️ session 初始化
 # =========================
 if "conversations" not in st.session_state:
     st.session_state.conversations = {}
@@ -98,19 +93,15 @@ if "current_topic" not in st.session_state:
     st.session_state.current_topic = "new"
 
 # =========================
-# 🎨 UI 主畫面
-# =========================
-st.set_page_config(page_title="法律AI分析系統", page_icon="⚖️")
-
-st.title("⚖️ 法律情境分析系統（Gemini AI）")
-st.write("輸入情境，AI將自動分析涉及的法條與責任")
-
-# =========================
-# ✏️ 使用者輸入
+# ✏️ 輸入區
 # =========================
 user_input = st.text_area("📌 請輸入案件情境", height=150)
 
 if st.button("🔍 開始分析"):
+
+    if not API_KEY:
+        st.error("❌ 請先輸入 API Key")
+        st.stop()
 
     if user_input.strip() == "":
         st.warning("請輸入內容")
@@ -119,12 +110,11 @@ if st.button("🔍 開始分析"):
             try:
                 result = analyze_with_ai(user_input)
 
-                # 存成新對話
                 topic_id = len(st.session_state.topic_ids)
                 st.session_state.topic_ids.append(topic_id)
 
                 st.session_state.conversations[topic_id] = {
-                    "title": user_input[:10],
+                    "title": user_input[:12],
                     "content": result
                 }
 
@@ -134,55 +124,46 @@ if st.button("🔍 開始分析"):
                 st.error(f"❌ 錯誤：{e}")
 
 # =========================
-# 📄 顯示結果（雙頁 Tabs）
+# 📄 顯示結果（Tabs）
 # =========================
 if st.session_state.current_topic != "new":
+
     data = st.session_state.conversations[st.session_state.current_topic]
+    content = data["content"]
 
     st.markdown("---")
     st.subheader(f"📂 案件：{data['title']}")
 
-    # ✨ 分割 AI 回答
-    content = data["content"]
-
     tab1, tab2 = st.tabs(["📘 基本法律分析", "⚖️ 多角色 + 判決"])
 
+    # =====================
+    # 📘 Tab1
+    # =====================
     with tab1:
+        st.markdown("### 📘 基本法律分析")
+
         if "第一部分" in content:
-            st.markdown("### 📘 基本法律分析")
             st.write(content.split("第二部分")[0])
         else:
             st.write(content)
 
+    # =====================
+    # ⚖️ Tab2
+    # =====================
     with tab2:
-        st.markdown("### ⚖️ 多角色分析 + 判決")
+        st.markdown("### ⚖️ 多角色分析與模擬判決")
 
-        if "第二部分" in content:
-            second_part = content.split("第二部分：進階分析")[-1]
-            st.write(second_part)
-        else:
-            st.warning("⚠️ 尚無進階分析內容")
+        st.write(content)
 
 # =========================
-# 📚 側邊欄
+# 📚 側邊歷史紀錄
 # =========================
 with st.sidebar:
+    st.markdown("---")
     st.header("🗂️ 案件紀錄")
-
-    if st.button("🆕 新案件"):
-        st.session_state.current_topic = "new"
 
     for tid in st.session_state.topic_ids:
         title = st.session_state.conversations[tid]["title"]
 
-        label = f"✔️ {title}" if tid == st.session_state.current_topic else title
-
-        if st.button(label, key=f"topic_{tid}"):
+        if st.button(f"📄 {title}", key=f"t_{tid}"):
             st.session_state.current_topic = tid
-
-    st.markdown("---")
-
-    if st.button("🧹 清除紀錄"):
-        st.session_state.conversations = {}
-        st.session_state.topic_ids = []
-        st.session_state.current_topic = "new"
