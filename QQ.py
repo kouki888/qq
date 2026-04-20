@@ -43,19 +43,43 @@ def analyze_with_ai(text):
 【案件內容】
 {text}
 
-請務必用以下格式回答：
+請分成兩個部分輸出：
 
+========================
+【第一部分：基本法律分析】
+========================
 【可能涉及罪名】
-- （列出所有可能罪名）
+- 
 
 【法律依據】
-- （列出法條，例如刑法第幾條）
+- 
 
 【構成要件分析】
-- （逐點說明為何成立）
+- 
 
 【可能法律責任】
-- （刑責或民事責任）
+- 
+
+========================
+【第二部分：進階分析】
+========================
+【檢察官觀點】
+-
+
+【辯護律師觀點】
+-
+
+【法官觀點】
+-
+
+【消費者觀點】
+-
+
+【模擬判決結果】
+（請用法院判決書格式：主文 / 理由 / 結果）
+
+【風險等級】
+（低 / 中 / 高）
 """
 
     response = model.generate_content(prompt)
@@ -117,7 +141,27 @@ if st.session_state.current_topic != "new":
 
     st.markdown("---")
     st.subheader(f"📂 案件：{data['title']}")
-    st.write(data["content"])
+
+    # ✨ 分割 AI 回答
+    content = data["content"]
+
+    tab1, tab2 = st.tabs(["📘 基本法律分析", "⚖️ 多角色 + 判決"])
+
+    with tab1:
+        if "第一部分" in content:
+            st.markdown("### 📘 基本法律分析")
+            st.write(content.split("第二部分")[0])
+        else:
+            st.write(content)
+
+    with tab2:
+        st.markdown("### ⚖️ 多角色分析 + 判決")
+
+        if "第二部分" in content:
+            second_part = content.split("第二部分：進階分析")[-1]
+            st.write(second_part)
+        else:
+            st.warning("⚠️ 尚無進階分析內容")
 
 # =========================
 # 📚 側邊欄
