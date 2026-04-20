@@ -137,14 +137,34 @@ if st.button("🔍 開始分析"):
                 st.error(f"❌ 錯誤：{e}")
 
 # =========================
-# 📄 顯示結果
+# 📄 顯示結果（雙頁 Tabs）
 # =========================
 if st.session_state.current_topic != "new":
     data = st.session_state.conversations[st.session_state.current_topic]
 
     st.markdown("---")
     st.subheader(f"📂 案件：{data['title']}")
-    st.write(data["content"])
+
+    # ✨ 分割 AI 回答
+    content = data["content"]
+
+    tab1, tab2 = st.tabs(["📘 基本法律分析", "⚖️ 多角色 + 判決"])
+
+    with tab1:
+        if "第一部分" in content:
+            st.markdown("### 📘 基本法律分析")
+            st.write(content.split("第二部分")[0])
+        else:
+            st.write(content)
+
+    with tab2:
+        st.markdown("### ⚖️ 多角色分析 + 判決")
+
+        if "第二部分" in content:
+            second_part = content.split("第二部分：進階分析")[-1]
+            st.write(second_part)
+        else:
+            st.warning("⚠️ 尚無進階分析內容")
 
 # =========================
 # 📚 側邊欄
