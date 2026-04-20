@@ -38,7 +38,7 @@ with st.sidebar:
 # 🧠 模型
 # =========================
 def get_model():
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.GenerativeModel("gemini-3.0-flash")
 
 # =========================
 # ⚖️ AI分析核心
