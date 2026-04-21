@@ -145,7 +145,7 @@ if st.session_state.current_topic != "new":
     # ✨ 分割 AI 回答
     content = data["content"]
 
-    tab1, tab2 = st.tabs(["📘 基本法律分析", "⚖️ 多角色 + 判決"])
+    tab1, tab2 = st.tabs(["📘 基本法律分析", "⚖️ 多角色 + 模擬判決"])
 
     with tab1:
         if "第一部分" in content:
