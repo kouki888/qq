@@ -155,7 +155,7 @@ if st.session_state.current_topic != "new":
             st.write(content)
 
     with tab2:
-        st.markdown("### ⚖️ 多角色分析 + 判決")
+        st.markdown("### ⚖️ 多角色分析 + 模擬判決")
 
         if "第二部分" in content:
             second_part = content.split("第二部分：進階分析")[-1]
